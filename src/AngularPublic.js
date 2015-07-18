@@ -1,82 +1,101 @@
 'use strict';
 
-/* global
-    angularModule: true,
-    version: true,
-    
-    $LocaleProvider,
-    $CompileProvider,
-    
-    htmlAnchorDirective,
-    inputDirective,
-    inputDirective,
-    formDirective,
-    scriptDirective,
-    selectDirective,
-    styleDirective,
-    optionDirective,
-    ngBindDirective,
-    ngBindHtmlDirective,
-    ngBindTemplateDirective,
-    ngClassDirective,
-    ngClassEvenDirective,
-    ngClassOddDirective,
-    ngCspDirective,
-    ngCloakDirective,
-    ngControllerDirective,
-    ngFormDirective,
-    ngHideDirective,
-    ngIfDirective,
-    ngIncludeDirective,
-    ngInitDirective,
-    ngNonBindableDirective,
-    ngPluralizeDirective,
-    ngRepeatDirective,
-    ngShowDirective,
-    ngStyleDirective,
-    ngSwitchDirective,
-    ngSwitchWhenDirective,
-    ngSwitchDefaultDirective,
-    ngOptionsDirective,
-    ngTranscludeDirective,
-    ngModelDirective,
-    ngListDirective,
-    ngChangeDirective,
-    requiredDirective,
-    requiredDirective,
-    ngValueDirective,
-    ngAttributeAliasDirectives,
-    ngEventDirectives,
+/* global angularModule: true,
+  version: true,
 
-    $AnchorScrollProvider,
-    $AnimateProvider,
-    $BrowserProvider,
-    $CacheFactoryProvider,
-    $ControllerProvider,
-    $DocumentProvider,
-    $ExceptionHandlerProvider,
-    $FilterProvider,
-    $InterpolateProvider,
-    $IntervalProvider,
-    $HttpProvider,
-    $HttpBackendProvider,
-    $LocationProvider,
-    $LogProvider,
-    $ParseProvider,
-    $RootScopeProvider,
-    $QProvider,
-    $SceProvider,
-    $SceDelegateProvider,
-    $SnifferProvider,
-    $TemplateCacheProvider,
-    $TimeoutProvider,
-    $WindowProvider
+  $CompileProvider,
+
+  htmlAnchorDirective,
+  inputDirective,
+  inputDirective,
+  formDirective,
+  scriptDirective,
+  selectDirective,
+  styleDirective,
+  optionDirective,
+  ngBindDirective,
+  ngBindHtmlDirective,
+  ngBindTemplateDirective,
+  ngClassDirective,
+  ngClassEvenDirective,
+  ngClassOddDirective,
+  ngCloakDirective,
+  ngControllerDirective,
+  ngFormDirective,
+  ngHideDirective,
+  ngIfDirective,
+  ngIncludeDirective,
+  ngIncludeFillContentDirective,
+  ngInitDirective,
+  ngNonBindableDirective,
+  ngPluralizeDirective,
+  ngRepeatDirective,
+  ngShowDirective,
+  ngStyleDirective,
+  ngSwitchDirective,
+  ngSwitchWhenDirective,
+  ngSwitchDefaultDirective,
+  ngOptionsDirective,
+  ngTranscludeDirective,
+  ngModelDirective,
+  ngListDirective,
+  ngChangeDirective,
+  patternDirective,
+  patternDirective,
+  requiredDirective,
+  requiredDirective,
+  minlengthDirective,
+  minlengthDirective,
+  maxlengthDirective,
+  maxlengthDirective,
+  ngValueDirective,
+  ngModelOptionsDirective,
+  ngAttributeAliasDirectives,
+  ngEventDirectives,
+
+  $AnchorScrollProvider,
+  $AnimateProvider,
+  $$CoreAnimateQueueProvider,
+  $$CoreAnimateRunnerProvider,
+  $BrowserProvider,
+  $CacheFactoryProvider,
+  $ControllerProvider,
+  $DocumentProvider,
+  $ExceptionHandlerProvider,
+  $FilterProvider,
+  $$ForceReflowProvider,
+  $InterpolateProvider,
+  $IntervalProvider,
+  $$HashMapProvider,
+  $HttpProvider,
+  $HttpParamSerializerProvider,
+  $HttpParamSerializerJQLikeProvider,
+  $HttpBackendProvider,
+  $LocationProvider,
+  $LogProvider,
+  $ParseProvider,
+  $RootScopeProvider,
+  $QProvider,
+  $$QProvider,
+  $$SanitizeUriProvider,
+  $SceProvider,
+  $SceDelegateProvider,
+  $SnifferProvider,
+  $TemplateCacheProvider,
+  $TemplateRequestProvider,
+  $$TestabilityProvider,
+  $TimeoutProvider,
+  $$RAFProvider,
+  $WindowProvider,
+  $$jqLiteProvider,
+  $$CookieReaderProvider
 */
 
 
 /**
- * @ngdoc property
+ * @ngdoc object
  * @name angular.version
+ * @module ng
  * @description
  * An object that contains information about the current AngularJS version. This object has the
  * following properties:
@@ -96,20 +115,21 @@ var version = {
 };
 
 
-function publishExternalAPI(angular){
+function publishExternalAPI(angular) {
   extend(angular, {
     'bootstrap': bootstrap,
     'copy': copy,
     'extend': extend,
+    'merge': merge,
     'equals': equals,
     'element': jqLite,
     'forEach': forEach,
     'injector': createInjector,
-    'noop':noop,
-    'bind':bind,
+    'noop': noop,
+    'bind': bind,
     'toJson': toJson,
     'fromJson': fromJson,
-    'identity':identity,
+    'identity': identity,
     'isUndefined': isUndefined,
     'isDefined': isDefined,
     'isString': isString,
@@ -123,19 +143,20 @@ function publishExternalAPI(angular){
     'lowercase': lowercase,
     'uppercase': uppercase,
     'callbacks': {counter: 0},
+    'getTestability': getTestability,
     '$$minErr': minErr,
-    '$$csp': csp
+    '$$csp': csp,
+    'reloadWithDebugInfo': reloadWithDebugInfo
   });
 
   angularModule = setupModuleLoader(window);
-  try {
-    angularModule('ngLocale');
-  } catch (e) {
-    angularModule('ngLocale', []).provider('$locale', $LocaleProvider);
-  }
 
   angularModule('ng', ['ngLocale'], ['$provide',
     function ngModule($provide) {
+      // $$sanitizeUriProvider needs to be before $compileProvider as it is used by it.
+      $provide.provider({
+        $$sanitizeUri: $$SanitizeUriProvider
+      });
       $provide.provider('$compile', $CompileProvider).
         directive({
             a: htmlAnchorDirective,
@@ -172,36 +193,58 @@ function publishExternalAPI(angular){
             ngModel: ngModelDirective,
             ngList: ngListDirective,
             ngChange: ngChangeDirective,
+            pattern: patternDirective,
+            ngPattern: patternDirective,
             required: requiredDirective,
             ngRequired: requiredDirective,
-            ngValue: ngValueDirective
+            minlength: minlengthDirective,
+            ngMinlength: minlengthDirective,
+            maxlength: maxlengthDirective,
+            ngMaxlength: maxlengthDirective,
+            ngValue: ngValueDirective,
+            ngModelOptions: ngModelOptionsDirective
+        }).
+        directive({
+          ngInclude: ngIncludeFillContentDirective
         }).
         directive(ngAttributeAliasDirectives).
         directive(ngEventDirectives);
       $provide.provider({
         $anchorScroll: $AnchorScrollProvider,
         $animate: $AnimateProvider,
+        $$animateQueue: $$CoreAnimateQueueProvider,
+        $$AnimateRunner: $$CoreAnimateRunnerProvider,
         $browser: $BrowserProvider,
         $cacheFactory: $CacheFactoryProvider,
         $controller: $ControllerProvider,
         $document: $DocumentProvider,
         $exceptionHandler: $ExceptionHandlerProvider,
         $filter: $FilterProvider,
+        $$forceReflow: $$ForceReflowProvider,
         $interpolate: $InterpolateProvider,
         $interval: $IntervalProvider,
         $http: $HttpProvider,
+        $httpParamSerializer: $HttpParamSerializerProvider,
+        $httpParamSerializerJQLike: $HttpParamSerializerJQLikeProvider,
         $httpBackend: $HttpBackendProvider,
         $location: $LocationProvider,
         $log: $LogProvider,
         $parse: $ParseProvider,
         $rootScope: $RootScopeProvider,
         $q: $QProvider,
+        $$q: $$QProvider,
         $sce: $SceProvider,
         $sceDelegate: $SceDelegateProvider,
         $sniffer: $SnifferProvider,
         $templateCache: $TemplateCacheProvider,
+        $templateRequest: $TemplateRequestProvider,
+        $$testability: $$TestabilityProvider,
         $timeout: $TimeoutProvider,
-        $window: $WindowProvider
+        $window: $WindowProvider,
+        $$rAF: $$RAFProvider,
+        $$jqLite: $$jqLiteProvider,
+        $$HashMap: $$HashMapProvider,
+        $$cookieReader: $$CookieReaderProvider
       });
     }
   ]);
